@@ -46,6 +46,8 @@ struct Thread {
     //pthread_cond_t condition;
 };
 
+//https://man.openbsd.org/OpenBSD-5.1/pthread_resume_np.3
+//https://stackoverflow.com/questions/11468333/linux-threads-suspend-resume
 //https://www.geeksforgeeks.org/multithreading-c-2/
 //https://www.thegeekstuff.com/2012/04/create-threads-in-linux/
 //https://randu.org/tutorials/threads/

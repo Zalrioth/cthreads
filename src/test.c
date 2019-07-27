@@ -1,14 +1,14 @@
 #include <core/mana.h>
-#include <thread.h>
+#include "../include/threads/threads.h"
 
-void* testFunction(void* data)
+void *testFunction(void *data)
 {
     printf("Hello from thread!\n");
 
     return NULL;
 }
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
     struct Thread thread;
 

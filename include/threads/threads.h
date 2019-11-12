@@ -2,81 +2,77 @@
 #ifndef THREADS_H
 #define THREADS_H
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__WIN32__) || defined(__WINDOWS__)
+#define THREAD_WIN32
+#else
+#define THREAD_POSIX
+#endif
+
+#include <time.h>
+
+#ifdef THREAD_WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#define __UNDEF_LEAN_AND_MEAN
+#endif
 #include <windows.h>
-
-struct Thread {
-  HANDLE handle;
-  //HANDLE mutex;
-};
-
-//https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-resumethread
-//https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-suspendthread
-//https://docs.microsoft.com/en-us/windows/win32/sync/using-mutex-objects
-//https://stackoverflow.com/questions/1981459/using-threads-in-c-on-windows-simple-example
-//https://docs.microsoft.com/en-us/windows/win32/procthread/creating-threads
-int thread_create(struct Thread *thread, void *entryPoint, void *data) {
-  //thread->mutex = CreateMutex(NULL, FALSE, NULL);
-  thread->handle = CreateThread(NULL, 0, entryPoint, data, 0, NULL);
-  // Error starting thread
-  if (!thread->handle)
-    return 1;
-
-  //https://stackoverflow.com/questions/418742/is-it-reasonable-to-call-closehandle-on-a-thread-before-it-terminates#418748
-  //Mark thread for closing to let thread die when finished executing
-  CloseHandle(thread->handle);
-  //CloseHandle(thread->mutex);
-
-  return 0;
-}
-void thread_start(struct Thread *thread) {
-  ResumeThread(thread->handle);
-}
-void thread_stop(struct Thread *thread) {
-  SuspendThread(thread->handle);
-}
-
+#ifdef __UNDEF_LEAN_AND_MEAN
+#undef WIN32_LEAN_AND_MEAN
+#undef __UNDEF_LEAN_AND_MEAN
+#endif
 #else
 #include <pthread.h>
-#include <pthread_np.h>
+#endif
 
-struct Thread {
-  pthread_t handle;
-  //int runFlag;
-  //pthread_mutex_t mutex;
-  //pthread_cond_t condition;
+#if defined(THREAD_WIN32)
+typedef HANDLE thrd_t;
+#else
+typedef pthread_t thrd_t;
+#endif
+
+#define THREAD_FAILED 0
+#define THREAD_NO_ERROR 1
+#define THREAD_TIMEOUT 2
+#define THREAD_BUSY 3
+#define THREAD_NO_MEMORY 4
+
+struct ThreadStartInfo {
+  int (*func)(void *);
+  void *arg;
 };
 
-//https://man.openbsd.org/OpenBSD-5.1/pthread_resume_np.3
-//https://stackoverflow.com/questions/11468333/linux-threads-suspend-resume
-//https://www.geeksforgeeks.org/multithreading-c-2/
-//https://www.thegeekstuff.com/2012/04/create-threads-in-linux/
-//https://randu.org/tutorials/threads/
-//https://stackoverflow.com/questions/13662689/what-is-the-best-solution-to-pause-and-resume-pthreads
-int thread_create(struct Thread *thread, void *entryPoint, void *data) {
-  //pthread_mutex_init(&(thread_args->mutex), NULL);
-  //pthread_cond_init(&(thread_args->condition), NULL);
-  pthread_create(&thread->handle, NULL, entryPoint, data);
+#if defined(THREAD_WIN32)
+static DWORD WINAPI thrd_wrapper_function(LPVOID arg)
+#else
+static void *thrd_wrapper_function(void *arg)
+#endif
+{
+  struct ThreadStartInfo *start_info = (struct ThreadStartInfo *)arg;
+  int result = start_info->func(start_info->arg);
 
-  if (!thread->handle)
-    return 1;
-}
-void thread_start(struct Thread *thread) {
-  pthread_resume_np(thread->handle);
-  // Unlocks mutex
-  //pthread_mutex_lock(&(thread->mutex));
-  //thread->runFlag = 0;
-  //phtread_cond_broadcast(&(thread->condition));
-  //pthread_mutex_unlock(&(thread->mutex));
-}
-void thread_stop(struct Thread *thread) {
-  pthread_suspend_np(thread->handle);
-  // Locks current thread with mutex
-  //pthread_mutex_lock(&(thread->mutex));
-  //thread->runFlag = 1;
-  //pthread_mutex_unlock(&(thread->mutex));
+  free((void *)start_info);
+
+#if defined(THREAD_WIN32)
+  if (_tinycthread_tss_head != NULL) {
+    _tinycthread_tss_cleanup();
+  }
+
+  return (DWORD)result;
+#else
+  return (void *)(intptr_t)result;
+#endif
 }
 
+int thrd_create(thrd_t *thread, void *entry_point, void *arg) {
+  struct ThreadStartInfo *start_info = (struct ThreadStartInfo *)malloc(sizeof(struct ThreadStartInfo));
+  if (start_info == NULL)
+    return THREAD_NO_MEMORY;
+
+#if defined(THREAD_WIN32)
+  typedef HANDLE thrd_t;
+#else
+  typedef pthread_t thrd_t;
 #endif
 
-#endif
+  return THREAD_NO_ERROR;
+}

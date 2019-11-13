@@ -4,4 +4,6 @@
 
 ## Getting Started
 
-C Threads is a single header implementation of C11 theads and is based off the tinycthread library.<br/>
+C Threads is a single header cross-platform implementation of C11 threads.<br/>
+https://github.com/tinycthread/tinycthread<br/>
+https://github.com/jtsiomb/c11threads/blob/master/c11threads.h<br/>

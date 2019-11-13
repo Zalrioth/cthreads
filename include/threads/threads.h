@@ -24,55 +24,38 @@
 #include <pthread.h>
 #endif
 
+#if !(defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 201102L)) && !defined(_Thread_local)
+#if defined(__GNUC__) || defined(__INTEL_COMPILER) || defined(__SUNPRO_CC) || defined(__IBMCPP__)
+#define _Thread_local __thread
+#else
+#define _Thread_local __declspec(thread)
+#endif
+#elif defined(__GNUC__) && defined(__GNUC_MINOR__) && (((__GNUC__ << 8) | __GNUC_MINOR__) < ((4 << 8) | 9))
+#define _Thread_local __thread
+#endif
+
 #if defined(THREAD_WIN32)
 typedef HANDLE thrd_t;
 #else
 typedef pthread_t thrd_t;
 #endif
 
-#define THREAD_FAILED 0
-#define THREAD_NO_ERROR 1
-#define THREAD_TIMEOUT 2
-#define THREAD_BUSY 3
-#define THREAD_NO_MEMORY 4
+typedef int (*thrd_start_t)(void *arg);
 
-struct ThreadStartInfo {
-  int (*func)(void *);
-  void *arg;
+enum {
+  thrd_error = 0,
+  thrd_success = 1,
+  thrd_timedout = 2,
+  thrd_busy = 3,
+  thrd_nomem = 4
 };
 
+int thrd_create(thrd_t *thread, thrd_start_t func, void *arg) {
 #if defined(THREAD_WIN32)
-static DWORD WINAPI thrd_wrapper_function(LPVOID arg)
-#else
-static void *thrd_wrapper_function(void *arg)
-#endif
-{
-  struct ThreadStartInfo *start_info = (struct ThreadStartInfo *)arg;
-  int result = start_info->func(start_info->arg);
-
-  free((void *)start_info);
-
-#if defined(THREAD_WIN32)
-  if (_tinycthread_tss_head != NULL) {
-    _tinycthread_tss_cleanup();
-  }
-
-  return (DWORD)result;
-#else
-  return (void *)(intptr_t)result;
-#endif
-}
-
-int thrd_create(thrd_t *thread, void *entry_point, void *arg) {
-  struct ThreadStartInfo *start_info = (struct ThreadStartInfo *)malloc(sizeof(struct ThreadStartInfo));
-  if (start_info == NULL)
-    return THREAD_NO_MEMORY;
-
-#if defined(THREAD_WIN32)
-  typedef HANDLE thrd_t;
+  *thread = CreateThread(NULL, 0, func, arg, 0, NULL);
 #else
   typedef pthread_t thrd_t;
 #endif
 
-  return THREAD_NO_ERROR;
+  return thrd_success;
 }

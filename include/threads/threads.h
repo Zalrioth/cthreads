@@ -1,4 +1,4 @@
-#pragma once
+/*#pragma once
 #ifndef THREADS_H
 #define THREADS_H
 
@@ -43,19 +43,18 @@ typedef pthread_t thrd_t;
 typedef int (*thrd_start_t)(void *arg);
 
 enum {
-  thrd_error = 0,
-  thrd_success = 1,
-  thrd_timedout = 2,
-  thrd_busy = 3,
-  thrd_nomem = 4
+  thrd_success = 0,
+  thrd_timedout,
+  thrd_busy,
+  thrd_nomem,
+  thrd_error
 };
 
-int thrd_create(thrd_t *thread, thrd_start_t func, void *arg) {
-#if defined(THREAD_WIN32)
-  *thread = CreateThread(NULL, 0, func, arg, 0, NULL);
-#else
-  typedef pthread_t thrd_t;
-#endif
+// TODOOOOOOOOOOOOOOOOOOOO: Support pthread
+
+int thrd_create(thrd_t *thr, thrd_start_t func, void *arg) {
+  *thr = CreateThread(NULL, 0, func, arg, 0, NULL);
 
   return thrd_success;
 }
+*/
